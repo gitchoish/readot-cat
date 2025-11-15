@@ -1,82 +1,117 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useMemo } from "react";
 import { store } from "@/lib/localStore";
 
-export default function MiniCalendar() {
-  const [days, setDays] = useState<
-    { date: string; day: number; total: number }[]
-  >([]);
+// 흑백 농도
+function toneFor(pages: number) {
+  if (pages === 0) return "rgba(15,15,15,0)";
+  if (pages < 10) return "rgba(15,15,15,0.15)";
+  if (pages < 30) return "rgba(15,15,15,0.35)";
+  return "rgba(15,15,15,0.6)";
+}
 
-  const [monthInfo, setMonthInfo] = useState({
-    year: 0,
-    month: 0,
+// 7x6 칸 채우기용
+function buildCells(year: number, month1to12: number) {
+  const firstDay = new Date(year, month1to12 - 1, 1).getDay(); // 0=일
+  const days = store.daysInMonth(year, month1to12);
+  const leading = firstDay;
+  const trailing = (42 - (leading + days)) % 7;
+  return {
+    days,
+    leading,
+    trailing,
+  };
+}
+
+export default function MiniCalendar() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  const todayISO = today.toISOString().slice(0, 10);
+  const monthLabel = new Date(year, month - 1, 1).toLocaleString("en-US", {
+    month: "short",
   });
 
-  useEffect(() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth() + 1;
-    setMonthInfo({ year: y, month: m });
-
-    const monthLogs = store.dailyTotalsForMonth(y, m);
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const list = Array.from({ length: daysInMonth }, (_, i) => {
-      const dayNum = i + 1;
-      const dateStr = `${y}-${String(m).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
-      const found = monthLogs.find((d) => d.date === dateStr);
-      return { date: dateStr, day: dayNum, total: found ? found.total : 0 };
-    });
-
-    setDays(list);
-  }, []);
+  // 여기서 dailyTotalsForMonth는 [{day:1,total:0}, ...] 이 모양임
+  const monthData = useMemo(
+    () => store.dailyTotalsForMonth(year, month),
+    [year, month]
+  );
+  const { days, leading, trailing } = buildCells(year, month);
 
   return (
-    <div
-      className="w-full border-2 border-black rounded-xl mt-4 p-2 bg-white"
-      style={{
-        fontFamily: "monospace",
-      }}
-    >
-      {/* 상단 헤더 */}
-      <div className="flex justify-between items-center mb-2 text-xs">
-        <span>
-          {monthInfo.year}.{String(monthInfo.month).padStart(2, "0")}{" "}
-          <span className="font-bold">({monthInfo.month}월)</span>
-        </span>
-        <button
-          onClick={() => alert("전체 캘린더 보기 기능은 추후 추가됩니다.")}
-          className="border-2 border-black rounded-full px-2 py-[2px] hover:bg-black hover:text-white transition-all"
-        >
-          전체 보기
-        </button>
+    <div className="ui-card p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-bold">
+          {year}.{String(month).padStart(2, "0")}{" "}
+          <span className="opacity-70">({monthLabel})</span>
+        </div>
+        <Link className="ui-btn" href="/calendar">
+          Full
+        </Link>
       </div>
 
-      {/* 달력 */}
+      {/* 요일 헤더 */}
       <div
-        className="grid grid-cols-7 gap-[2px]"
-        style={{
-          fontSize: "11px",
-          textAlign: "center",
-        }}
+        className="grid text-center text-[10px] mb-1 opacity-80"
+        style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}
       >
-        {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
-          <div key={d} className="font-bold border-b border-black pb-[1px]">
-            {d}
-          </div>
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((w) => (
+          <div key={w}>{w}</div>
+        ))}
+      </div>
+
+      {/* 본 캘린더 */}
+      <div
+        className="grid gap-[2px]"
+        style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}
+      >
+        {/* 앞 공백 */}
+        {Array.from({ length: leading }).map((_, i) => (
+          <div
+            key={`b-${i}`}
+            className="border-2 border-black bg-white"
+            style={{ aspectRatio: "1 / 1" }}
+          />
         ))}
 
-        {days.map((d) => (
+        {/* 날짜 */}
+        {Array.from({ length: days }).map((_, i) => {
+          const d = i + 1;
+          const iso = new Date(year, month - 1, d).toISOString().slice(0, 10);
+          // ✅ 여기! day로 찾아서 total 가져오기
+          const total =
+            monthData.find((item) => item.day === d)?.total ?? 0;
+          const isToday = iso === todayISO;
+
+          return (
+            <Link
+              key={iso}
+              href="/calendar"
+              className="relative border-2 border-black"
+              style={{
+                aspectRatio: "1 / 1",
+                background: toneFor(total),
+              }}
+              title={`${d} · ${total}p`}
+            >
+              {/* 오늘 표시용 프레임 */}
+              {isToday && (
+                <span className="pointer-events-none absolute inset-0 border-2 border-black" />
+              )}
+            </Link>
+          );
+        })}
+
+        {/* 뒤 공백 */}
+        {Array.from({ length: trailing }).map((_, i) => (
           <div
-            key={d.date}
-            className="flex items-center justify-center border border-black aspect-square"
-            style={{
-              backgroundColor: d.total > 0 ? "#000" : "#fff",
-              color: d.total > 0 ? "#fff" : "#000",
-            }}
-          >
-            {d.day}
-          </div>
+            key={`a-${i}`}
+            className="border-2 border-black bg-white"
+            style={{ aspectRatio: "1 / 1" }}
+          />
         ))}
       </div>
     </div>

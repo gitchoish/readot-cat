@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import CatTama from "./CatTama";
+import {
+  getCatGrowthState,
+  type CatGrowthState,
+} from "@/lib/catGrowth";
 
 type CatMode = "idle" | "walkA" | "walkB" | "happy" | "sleepy";
 
@@ -17,6 +21,24 @@ export default function CatPlayground() {
   const dirRef = useRef(1);
   const [fires, setFires] = useState<Firework[]>([]);
   const fireId = useRef(0);
+
+  // 성장 상태: 레벨/기분/오라 + 통계
+  const [growth, setGrowth] = useState<CatGrowthState | null>(null);
+
+  // 성장 상태를 localStore 기반으로 다시 계산
+  const refreshGrowth = () => {
+    try {
+      const next = getCatGrowthState();
+      setGrowth(next);
+    } catch (e) {
+      console.error("Failed to compute cat growth state", e);
+    }
+  };
+
+  // 처음 진입 시 한 번 성장 상태 계산
+  useEffect(() => {
+    refreshGrowth();
+  }, []);
 
   // 기본 idle ↔ walk
   useEffect(() => {
@@ -74,13 +96,18 @@ export default function CatPlayground() {
     }, 900);
   };
 
-  // 로그 추가 이벤트 → happy
+  // 로그 추가 이벤트 → happy + 성장 상태도 함께 갱신
   useEffect(() => {
     function onLogAdded() {
+      // 1) 성장 상태 다시 계산
+      refreshGrowth();
+
+      // 2) 기쁨 모션 + 폭죽
       setMode("happy");
       spawnFireworks(x);
       setTimeout(() => setMode("idle"), 2500);
     }
+
     if (typeof window !== "undefined") {
       window.addEventListener("readot-log-added", onLogAdded);
     }
@@ -100,7 +127,7 @@ export default function CatPlayground() {
     return () => clearInterval(sleepyTimer);
   }, []);
 
-  // 👈 여기! 클릭해서도 happy 만들기
+  // 클릭해도 happy (성장 상태는 그대로)
   const handleCatClick = () => {
     setMode("happy");
     spawnFireworks(x);
@@ -129,7 +156,14 @@ export default function CatPlayground() {
           cursor: "pointer",
         }}
       >
-        <CatTama size={210} mode={mode} />
+        <CatTama
+          size={210}
+          mode={mode}
+          // 성장 정보 전달: 없으면 안전하게 기본값으로
+          levelStage={growth?.levelStage ?? 2}
+          mood={growth?.mood}
+          aura={growth?.aura}
+        />
       </div>
 
       {/* 폭죽 레이어 */}

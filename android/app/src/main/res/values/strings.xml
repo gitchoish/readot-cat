@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Readot Cat</string>
+    <string name="title_activity_main">Readot Cat</string>
+    <string name="package_name">com.gitchoish.readotcat</string>
+    <string name="custom_url_scheme">com.gitchoish.readotcat</string>
+</resources>

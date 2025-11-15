@@ -75,10 +75,6 @@ export default function LogPage() {
       note: note.trim() || undefined,
     });
 
-    // ✅ 이 한 줄 추가! 폭죽 신호 쏘기
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("readot-log-added"));}
-
     setPages("0");
     setNote("");
     refreshLogs();

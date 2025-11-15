@@ -12,7 +12,7 @@ export default function SettingsPage() {
   }, []);
 
   function save() {
-    store.saveSettings({ monthlyGoal: goal });
+    store.storeSettings({ monthlyGoal: goal });
     alert("저장했어요!");
   }
 
