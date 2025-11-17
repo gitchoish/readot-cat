@@ -71,11 +71,16 @@ function addLog(log: ReadLog) {
   list.push(log);
   save("readot-logs", list);
 
-  // 홈 화면이 실시간으로 다시 그릴 수 있도록 이벤트 쏴주기
   if (typeof window !== "undefined") {
+    // ✅ 다음에 홈에 들어가면 happy 이펙트를 한 번 터뜨리기 위한 플래그
+    window.localStorage.setItem("readot-pending-happy", "1");
+
+    // 이미 홈이 떠 있는 상태라면 실시간 반응도 가능하게 유지
     window.dispatchEvent(new Event("readot-log-added"));
   }
 }
+
+
 
 function saveLogs(list: ReadLog[]) {
   save("readot-logs", list);
